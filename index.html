@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Chain Multiplication Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .table-cell-anim {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .cell-target {
+            background-color: #fef08a !important; /* Yellow 200 */
+            border-color: #eab308 !important; /* Yellow 500 */
+            font-weight: 700;
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        .cell-dep {
+            background-color: #bfdbfe !important; /* Blue 200 */
+            border-color: #3b82f6 !important; /* Blue 500 */
+            font-weight: 600;
+        }
+        .cell-done {
+            background-color: #bbf7d0 !important; /* Green 200 */
+        }
+        .cell-empty {
+            color: #cbd5e1; /* Slate 300 */
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 4px;
+        }
+        td, th {
+            width: 3.5rem;
+            height: 3.5rem;
+            text-align: center;
+            vertical-align: middle;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            color: #475569;
+            box-shadow: none;
+        }
+        /* Custom Scrollbar for overflow areas */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h1 class="text-xl font-bold text-slate-900">Matrix Chain Simulator</h1>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <label for="p-array" class="text-sm font-medium text-slate-600 whitespace-nowrap">Dimensions (P):</label>
+                <input type="text" id="p-array" value="1, 5, 4, 3, 2, 1" class="w-full md:w-64 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm">
+                <button onclick="initializeSimulation()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition-colors font-medium text-sm whitespace-nowrap shadow-sm">
+                    Generate
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex flex-col gap-6">
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col lg:flex-row gap-8 items-stretch">
+            
+            <!-- Controls & Progress -->
+            <div class="flex-1 flex flex-col gap-4 border-r border-slate-100 pr-0 lg:pr-8">
+                <div class="flex justify-between items-end">
+                    <h2 class="text-lg font-semibold text-slate-800">Simulation Controls</h2>
+                    <span id="step-counter" class="text-sm font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">Step 0 / 0</span>
+                </div>
+                
+                <div class="w-full bg-slate-100 rounded-full h-2 mb-2 overflow-hidden">
+                    <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 justify-center lg:justify-start">
+                    <button onclick="goToStart()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors text-sm font-medium" title="Go to Start">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+                    </button>
+                    <button onclick="prevStep()" class="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Previous
+                    </button>
+                    <button id="play-btn" onclick="togglePlay()" class="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-md transition-colors text-sm font-bold w-24">
+                        Play
+                    </button>
+                    <button onclick="nextStep()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors text-sm font-medium flex items-center gap-2 shadow-sm">
+                        Next <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <button onclick="goToEnd()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors text-sm font-medium" title="Go to End">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detailed Explanation Panel -->
+            <div class="flex-[2] flex flex-col gap-2">
+                <h3 id="panel-title" class="text-sm font-bold tracking-wider text-slate-500 uppercase">Initialization</h3>
+                <p id="panel-desc" class="text-slate-700 font-medium min-h-[3rem]">Press 'Generate' to start the simulation.</p>
+                
+                <div class="bg-slate-50 rounded-lg border border-slate-200 p-4 font-mono text-sm mt-2 relative min-h-[5rem] flex items-center shadow-inner">
+                    <div id="formula-display" class="w-full text-slate-800">
+                        Formula details will appear here.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            
+            <!-- Cost Matrix (m) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-800">Cost Matrix (m)</h2>
+                    <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">Minimum Scalar Multiplications</span>
+                </div>
+                <div class="flex justify-center">
+                    <div id="m-table-container"></div>
+                </div>
+            </div>
+
+            <!-- Split Matrix (s) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-x-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-800">Split Matrix (s)</h2>
+                    <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">Optimal Split Points (k)</span>
+                </div>
+                <div class="flex justify-center">
+                    <div id="s-table-container"></div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Final Result Panel -->
+        <div id="result-panel" class="hidden bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 text-white text-center transform transition-all">
+            <h2 class="text-xl font-bold mb-2">Simulation Complete!</h2>
+            <p class="text-indigo-100 mb-4">The minimum computational cost is <span id="final-cost" class="font-bold text-white text-2xl px-2"></span> scalar multiplications.</p>
+            <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 inline-block shadow-inner border border-white/30">
+                <span class="text-sm uppercase tracking-wide font-semibold text-indigo-100 block mb-1">Optimal Parenthesization</span>
+                <span id="final-parens" class="font-mono text-2xl font-bold tracking-widest text-white"></span>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Global State
+        let simulationSteps = [];
+        let currentStepIndex = 0;
+        let isPlaying = false;
+        let playInterval;
+        let numMatrices = 0;
+        let dimArray = [];
+
+        // Utility to deep copy 2D arrays
+        const copyGrid = (grid) => grid.map(row => [...row]);
+
+        // Parse input and start
+        function initializeSimulation() {
+            const inputStr = document.getElementById('p-array').value;
+            // Extract numbers using regex
+            const parsedArray = inputStr.match(/\d+/g);
+            
+            if (!parsedArray || parsedArray.length < 3) {
+                alert("Please enter at least 3 numbers (to form at least 2 matrices).");
+                return;
+            }
+
+            dimArray = parsedArray.map(Number);
+            numMatrices = dimArray.length - 1;
+            
+            generateSimulationSteps();
+            
+            currentStepIndex = 0;
+            if(isPlaying) togglePlay();
+            document.getElementById('result-panel').classList.add('hidden');
+            
+            renderStep();
+        }
+
+        function generateStepsData() {
+            let steps = [];
+            const n = numMatrices;
+            const p = dimArray;
+            
+            // Initialize grids with Infinity and 0s
+            let m = Array.from({length: n + 1}, () => Array(n + 1).fill(''));
+            let s = Array.from({length: n + 1}, () => Array(n + 1).fill(''));
+            
+            // Base Step: Empty Grids
+            steps.push({
+                title: "Setup",
+                desc: `We have ${n} matrices (A1 to A${n}). Cost of multiplying one matrix is 0.`,
+                formula: `m[i][i] = 0 for all i`,
+                m: copyGrid(m), s: copyGrid(s),
+                target: null, deps: []
+            });
+
+            // Set diagonals to 0
+            for (let i = 1; i <= n; i++) {
+                m[i][i] = 0;
+                s[i][i] = 0;
+            }
+
+            steps.push({
+                title: "Base Cases (L = 1)",
+                desc: `Filled the main diagonal with 0s because a single matrix requires 0 multiplications.`,
+                formula: `m[1][1] = 0, m[2][2] = 0, ...`,
+                m: copyGrid(m), s: copyGrid(s),
+                target: null, deps: [], highlightDiag: true
+            });
+
+            // Core DP Loop
+            for (let L = 2; L <= n; L++) {
+                for (let i = 1; i <= n - L + 1; i++) {
+                    let j = i + L - 1;
+                    m[i][j] = Infinity;
+                    
+                    steps.push({
+                        title: `Chain Length L=${L}`,
+                        desc: `Finding minimum cost to multiply chain A${i} ... A${j}.`,
+                        formula: `Calculating m[${i}][${j}]`,
+                        m: copyGrid(m), s: copyGrid(s),
+                        target: [i, j], deps: []
+                    });
+
+                    let minQ = Infinity;
+                    let bestK = -1;
+
+                    for (let k = i; k <= j - 1; k++) {
+                        let costLeft = m[i][k];
+                        let costRight = m[k + 1][j];
+                        let multCost = p[i - 1] * p[k] * p[j];
+                        let q = costLeft + costRight + multCost;
+
+                        let isNewMin = q < minQ;
+                        
+                        steps.push({
+                            title: `Testing split at k = ${k}`,
+                            desc: isNewMin 
+                                ? `Found a new minimum! ${q} is less than ${minQ === Infinity ? 'Infinity' : minQ}.` 
+                                : `Calculated ${q}. Not better than current min ${minQ}.`,
+                            formula: `<span class="text-slate-500">m[${i}][${k}] + m[${k+1}][${j}] + P${i-1}*P${k}*P${j}</span><br>
+                                      <span class="text-indigo-600 font-bold">${costLeft} + ${costRight} + (${p[i-1]} × ${p[k]} × ${p[j]}) = ${q}</span>`,
+                            m: copyGrid(m), s: copyGrid(s),
+                            target: [i, j], deps: [[i, k], [k + 1, j]],
+                            isNewMin: isNewMin,
+                            currentQ: q
+                        });
+
+                        if (isNewMin) {
+                            minQ = q;
+                            bestK = k;
+                        }
+                    }
+
+                    m[i][j] = minQ;
+                    s[i][j] = bestK;
+
+                    steps.push({
+                        title: `Locked minimum for A${i}..A${j}`,
+                        desc: `The optimal split for m[${i}][${j}] is after matrix A${bestK}.`,
+                        formula: `<span class="text-emerald-600 font-bold">m[${i}][${j}] = ${minQ}</span><br>
+                                  <span class="text-emerald-600 font-bold">s[${i}][${j}] = ${bestK}</span>`,
+                        m: copyGrid(m), s: copyGrid(s),
+                        target: [i, j], deps: [], locked: true
+                    });
+                }
+            }
+
+            steps.push({
+                title: "Algorithm Complete",
+                desc: "The tables are fully populated. We can now backtrack through the 's' table to find the optimal parenthesization.",
+                formula: `Final Cost: m[1][${n}] = ${m[1][n]}`,
+                m: copyGrid(m), s: copyGrid(s),
+                target: null, deps: [], isFinal: true
+            });
+
+            return { steps, finalM: m, finalS: s };
+        }
+
+        // Generate steps wrapper
+        function generateSimulationSteps() {
+            const result = generateStepsData();
+            simulationSteps = result.steps;
+        }
+
+        function renderTable(tableId, data, stepData, isCostMatrix) {
+            const n = numMatrices;
+            const container = document.getElementById(tableId);
+            
+            let html = `<table><thead><tr><th></th>`;
+            for (let i = 1; i <= n; i++) html += `<th>${i}</th>`;
+            html += `</tr></thead><tbody>`;
+
+            for (let i = 1; i <= n; i++) {
+                html += `<tr><th>${i}</th>`;
+                for (let j = 1; j <= n; j++) {
+                    let val = data[i][j];
+                    let classes = 'table-cell-anim text-slate-700 relative ';
+                    
+                    if (val === '') {
+                        classes += 'cell-empty';
+                        val = '-';
+                    } else if (i > j) {
+                        classes += 'bg-slate-50 cell-empty';
+                        val = ''; // Lower triangle
+                    }
+
+                    // Handle Highlights
+                    if (stepData.target && stepData.target[0] === i && stepData.target[1] === j) {
+                        if (stepData.locked) {
+                            classes += 'cell-done shadow-md';
+                        } else {
+                            classes += 'cell-target shadow-md';
+                        }
+                    } else if (stepData.deps && stepData.deps.some(d => d[0] === i && d[1] === j)) {
+                        if (isCostMatrix) {
+                            classes += 'cell-dep shadow-sm';
+                        }
+                    } else if (stepData.highlightDiag && i === j) {
+                        classes += 'bg-slate-100 font-bold text-slate-800';
+                    }
+
+                    html += `<td class="${classes}">
+                        <span class="z-10 relative">${val}</span>
+                        ${stepData.target && stepData.target[0] === i && stepData.target[1] === j && !stepData.locked && val === Infinity ? `<span class="absolute inset-0 flex items-center justify-center text-xs text-slate-400 opacity-50">...</span>` : ''}
+                    </td>`;
+                }
+                html += `</tr>`;
+            }
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function buildParens(s, i, j) {
+            if (i === j) {
+                return `A${i}`;
+            } else {
+                let k = s[i][j];
+                let left = buildParens(s, i, k);
+                let right = buildParens(s, k + 1, j);
+                return `(${left}${right})`;
+            }
+        }
+
+        function renderStep() {
+            if (simulationSteps.length === 0) return;
+            const step = simulationSteps[currentStepIndex];
+            
+            // Update Text
+            document.getElementById('panel-title').innerText = step.title;
+            document.getElementById('panel-desc').innerHTML = step.desc;
+            document.getElementById('formula-display').innerHTML = step.formula;
+            document.getElementById('step-counter').innerText = `Step ${currentStepIndex} / ${simulationSteps.length - 1}`;
+            
+            // Progress bar
+            const progress = (currentStepIndex / (simulationSteps.length - 1)) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // Draw Grids
+            renderTable('m-table-container', step.m, step, true);
+            renderTable('s-table-container', step.s, step, false);
+
+            // Handle Final Step UI
+            const resPanel = document.getElementById('result-panel');
+            if (step.isFinal) {
+                resPanel.classList.remove('hidden');
+                document.getElementById('final-cost').innerText = step.m[1][numMatrices];
+                document.getElementById('final-parens').innerText = buildParens(step.s, 1, numMatrices);
+                if(isPlaying) togglePlay(); // Auto-stop
+            } else {
+                resPanel.classList.add('hidden');
+            }
+        }
+
+        function nextStep() {
+            if (currentStepIndex < simulationSteps.length - 1) {
+                currentStepIndex++;
+                renderStep();
+            } else if (isPlaying) {
+                togglePlay();
+            }
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderStep();
+            }
+        }
+
+        function goToStart() {
+            currentStepIndex = 0;
+            renderStep();
+        }
+
+        function goToEnd() {
+            currentStepIndex = simulationSteps.length - 1;
+            renderStep();
+        }
+
+        function togglePlay() {
+            const btn = document.getElementById('play-btn');
+            if (isPlaying) {
+                clearInterval(playInterval);
+                btn.innerText = "Play";
+                btn.className = "px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-200 rounded-md transition-colors text-sm font-bold w-24";
+            } else {
+                if (currentStepIndex === simulationSteps.length - 1) currentStepIndex = 0;
+                playInterval = setInterval(nextStep, 700); // 700ms per step
+                btn.innerText = "Pause";
+                btn.className = "px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 rounded-md transition-colors text-sm font-bold w-24 shadow-inner";
+            }
+            isPlaying = !isPlaying;
+        }
+
+        // On load
+        window.onload = () => {
+            initializeSimulation();
+        };
+
+    </script>
+</body>
+</html>
